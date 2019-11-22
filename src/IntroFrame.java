@@ -5,18 +5,18 @@
     Date: 12/04/18
  */
 
-//Imports
+//Import Statements
 import javax.swing.*;
 import java.awt.*;
 
 
-public class IntroFrame extends JFrame {
+public class IntroFrame extends JFrame{
 
     //Base Constructor
-    public IntroFrame() {
+    public IntroFrame(){
 
         //Base Dimensions
-        setSize(600, 600);
+        setSize(600,600);
         setLocationRelativeTo(null);
         setTitle("loading...");
 
@@ -45,16 +45,16 @@ public class IntroFrame extends JFrame {
 
         //Manual label integration (setLocation and setSize)
         panel.add(logo);
-        logo.setLocation(160, 50);
-        logo.setSize(260, 260);
+        logo.setLocation(160,50);
+        logo.setSize(260,260);
 
         panel.add(loading);
-        loading.setLocation(0, 315);
-        loading.setSize(600, 100);
+        loading.setLocation(0,315);
+        loading.setSize(600,100);
 
         //Quote integration
-        int r = (int) Math.floor(Math.random() * 8);
-        switch (r) {
+        int r = (int)Math.floor(Math.random() * 8);
+        switch(r) {
             case 0:
                 panel.add(quoteOne);
                 quoteOne.setLocation(0, 415);
@@ -99,26 +99,26 @@ public class IntroFrame extends JFrame {
 
         //Background
         panel.add(backdrop);
-        backdrop.setLocation(0, 0);
-        backdrop.setSize(600, 600);
+        backdrop.setLocation(0,0);
+        backdrop.setSize(600,600);
 
         //Setup JFrame components
         add(panel);
         setVisible(true);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        try {
-            Thread.sleep(750);
+        try{
+            Thread.sleep(2750);
             new ClientLogin();
-            new ServerGUI(1500);
+            new ServerInterface(5555);
             dispose();
-        } catch (InterruptedException e) {
+        }catch(InterruptedException e){
         }
 
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args){
         new IntroFrame();
     }
-}
 
+}

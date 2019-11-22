@@ -1,3 +1,10 @@
+/*  [ClientLogin.java]
+    JFrame handling basic connection to the server
+    Author: Brian Zhang
+    ICS4UE
+    Date: 12/04/18
+ */
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -18,7 +25,7 @@ public class ClientLogin extends JFrame implements ActionListener {
     private JLabel text3;
 
     //Password for entry
-    private String password = "zawarudo";
+    private String password = "harvardlawschool";
 
     //Button SetUp
     private JButton login;
@@ -33,18 +40,17 @@ public class ClientLogin extends JFrame implements ActionListener {
                     GraphicsEnvironment.getLocalGraphicsEnvironment();
             ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("renogare.otf")));
         } catch (IOException | FontFormatException e) {
-            //Handle exception
         }
 
         //Custom UI Font
         setUIFont(new javax.swing.plaf.FontUIResource("renogare", Font.PLAIN, 12));
 
         //GUI Layout Management [CardLayout]
-        JPanel northPanel = new JPanel(new GridLayout(8,1,0,50));
-        JPanel serverAndPort = new JPanel(new GridLayout(1,1,0,0));
+        JPanel upperPanel = new JPanel(new GridLayout(8,1,0,50));
+        JPanel dataPanel = new JPanel(new GridLayout(1,1,0,0));
 
         //Spacer
-        northPanel.add(new JLabel(""));
+        upperPanel.add(new JLabel(""));
 
         serverField = new JTextField();
         serverField.setBackground(new Color(254, 234, 255));
@@ -52,30 +58,33 @@ public class ClientLogin extends JFrame implements ActionListener {
         portField.setBackground(new Color(254, 234, 255));
         portField.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        serverAndPort.add(new JLabel("|server address|:  "));
-        serverAndPort.add(serverField);
-        serverAndPort.add(new JLabel("|port number|:  ",SwingConstants.RIGHT));
-        serverAndPort.add(portField);
-        serverAndPort.add(new JLabel(""));
+        dataPanel.add(new JLabel("|server address|:  "));
+        dataPanel.add(serverField);
+        dataPanel.add(new JLabel("|port number|:  ",SwingConstants.RIGHT));
+        dataPanel.add(portField);
+        dataPanel.add(new JLabel(""));
 
 
-        northPanel.add(serverAndPort);
+        upperPanel.add(dataPanel);
 
         // the Label and the TextField
         text = new JLabel("|enter your username below|", SwingConstants.CENTER);
-        northPanel.add(text);
+        text.setFont(new javax.swing.plaf.FontUIResource("renogare", Font.PLAIN, 18));
+
+        upperPanel.add(text);
         enterField = new JTextField("anon");
         enterField.setBackground(new Color(255, 231, 234));
-        northPanel.add(enterField);
+        upperPanel.add(enterField);
         text2 = new JLabel("|enter password below|", SwingConstants.CENTER);
-        northPanel.add(text2);
+        text2.setFont(new javax.swing.plaf.FontUIResource("renogare", Font.PLAIN, 18));
+        upperPanel.add(text2);
         checkField = new JPasswordField("");
         checkField.setEchoChar('*');
         checkField.setBackground(new Color(255, 231, 234));
-        northPanel.add(checkField);
+        upperPanel.add(checkField);
         text3 = new JLabel("", SwingConstants.CENTER);
-        northPanel.add(text3);
-        add(northPanel, BorderLayout.NORTH);
+        upperPanel.add(text3);
+        add(upperPanel, BorderLayout.NORTH);
 
         //Buttons
         login = new JButton("|login|");
@@ -93,23 +102,6 @@ public class ClientLogin extends JFrame implements ActionListener {
         setVisible(true);
         enterField.requestFocus();
     }
-
-    // called by the GUI is the connection failed
-    // we reset our buttons, label, textfield
-    public void connectionFailed() {
-        login.setEnabled(true);
-        text.setText("|enter your username below|");
-        enterField.setText("anon");
-        // reset port number and host name as a construction time
-        portField.setText("");
-        serverField.setText("");
-        // let the user change them
-        serverField.setEditable(false);
-        portField.setEditable(false);
-        // don't react to a <CR> after the username
-        enterField.removeActionListener(this);
-    }
-
 
     public void actionPerformed(ActionEvent e) {
         Object button = e.getSource();
@@ -136,6 +128,8 @@ public class ClientLogin extends JFrame implements ActionListener {
                 return;
             }
 
+            //Server Connected Check
+
             //Password Check
             String codeCheck = checkField.getText().trim();
             if(!codeCheck.matches(password)) {
@@ -143,12 +137,13 @@ public class ClientLogin extends JFrame implements ActionListener {
                 return;
             }
 
-            //Forward collected information to ClientGUI
-            new ClientGUI(server,port,username);
+            //Forward collected information to ClientInterface
+            ClientInterface next = new ClientInterface(server,port,username);
             dispose();
         }
 
     }
+
     //Custom Font Method
     public static void setUIFont (javax.swing.plaf.FontUIResource f){
         java.util.Enumeration keys = UIManager.getDefaults().keys();

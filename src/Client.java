@@ -5,6 +5,7 @@
     Date: 12/04/18
  */
 
+//Import Statements
 import java.net.*;
 import java.io.*;
 
@@ -16,23 +17,19 @@ public class Client  {
     private Socket socket;
 
     //GUI Connection
-    private ClientGUI cg;
+    private ClientInterface template;
+    private boolean abort = true;
 
     //String containers
     private String server, username;
     private int port;
 
-    Client(String server, int port, String username) {
-        // which calls the common constructor with the GUI set to null
-        this(server, port, username, null);
-    }
-
-    Client(String server, int port, String username, ClientGUI cg) {
+    Client(String server, int port, String username, ClientInterface template) {
         this.server = server;
         this.port = port;
         this.username = username;
 
-        this.cg = cg;
+        this.template = template;
     }
 
     public boolean start() {
@@ -41,12 +38,17 @@ public class Client  {
             socket = new Socket(server, port);
         }
         catch(Exception ec) {
+
+            //Can null the server connection
             display("error connecting to server: " + ec);
+            System.out.println("error connecting to server");
+            abort = true;
             return false;
         }
 
-        String msg = "connection accepted " + socket.getInetAddress() + ":" + socket.getPort();
-        display(msg);
+        String mserverGUI = "connection accepted " + socket.getInetAddress() + ":" + socket.getPort();
+        System.out.println(mserverGUI);
+        display(mserverGUI);
 
         try
         {
@@ -58,10 +60,7 @@ public class Client  {
             return false;
         }
 
-        // creates the Thread to listen from the server
         new ListenFromServer().start();
-        // Send our username to the server this is the only message that we
-        // will send as a String. All other messages will be ChatMessage objects
         try
         {
             listenOutput.writeObject(username);
@@ -71,62 +70,74 @@ public class Client  {
             disconnect();
             return false;
         }
-        // success we inform the caller that it worked
         return true;
     }
 
-    private void display(String msg) {
-        cg.append(msg + "\n");
+    private void display(String mserverGUI) {
+        template.append(mserverGUI + "\n");
     }
 
-    //Error here
-    public void sendMessage(ChatMessage msg) {
+    //Forwards messages via ChatMessage
+    public void sendMessage(ChatMessage mserverGUI) {
         try {
-            listenOutput.writeObject(msg);
+            listenOutput.writeObject(mserverGUI);
         }
         catch(IOException e) {
             display("exception writing to server: " + e);
         }
     }
 
+    public boolean getConnectionStatus(){
+        return abort;
+    }
+
+    //Manage connection to sockets
     private void disconnect() {
         try {
             if(listenInput != null) listenInput.close();
         }
-        catch(Exception e) {} // not much else I can do
+        catch(Exception e) {}
         try {
             if(listenOutput != null) listenOutput.close();
         }
-        catch(Exception e) {} // not much else I can do
+        catch(Exception e) {}
         try{
             if(socket != null) socket.close();
         }
-        catch(Exception e) {} // not much else I can do
+        catch(Exception e) {}
 
-        cg.connectionFailed();
+        template.connectionFailed();
 
     }
 
-    public class ListenFromServer extends Thread {
-
+    //Maintains connection with server
+    class ListenFromServer extends Thread {
+        boolean maintain = true;
+        ChatMessage chatmserverGUI;
         public void run() {
             try {
-                while(true) {
+                while (maintain) {
                     try {
-                        ChatMessage msg = (ChatMessage)listenInput.readObject();
-                        String newMsg = msg.getMessage();
-                        // if console mode print the message and add back the prompt
-                        cg.append(newMsg);
-
-                    }
-                    catch(IOException e) {
-                        display("server has closed the connection: " + e);
-                        cg.connectionFailed();
+                        chatmserverGUI = (ChatMessage) listenInput.readObject();
+                    } catch (EOFException ex) {
+                        break;
+                    } catch (IOException e) {
+                        display("Server has closed the connection: ");
+                        template.connectionFailed();
                         break;
                     }
-                    // can't happen with a String object but need the catch anyhow
-                    catch(ClassNotFoundException e2) {
+                    catch (ClassNotFoundException e2) {
                     }
+
+
+                    if (chatmserverGUI != null) {
+                        if (chatmserverGUI.getType() == ChatMessage.USERNAME) {
+                            template.appendUserList(chatmserverGUI.getMessage());
+                        } else if (chatmserverGUI.getType() == ChatMessage.MESSAGE) {
+                            template.append(chatmserverGUI.getMessage());
+                        }
+                    }
+
                 }
         }
         finally {

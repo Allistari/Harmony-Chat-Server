@@ -5,7 +5,7 @@ public class ChatMessage implements Serializable {
 
     protected static final long serialVersionUID = 1112122200L;
 
-    static final int USERLIST = 0, MESSAGE = 1, LOGOUT = 2 ,PRIVATEMSG = 3,USERNAME = 4,SERVERIMAGE = 5;
+    static final int USERLIST = 0, MESSAGE = 1, LOGOUT = 2 ,PRIVATEMserverGUI = 3,USERNAME = 4,SERVERIMAGE = 5;
     private int type;
     private String message;
     private ArrayList<String> receivers;
@@ -20,12 +20,12 @@ public class ChatMessage implements Serializable {
     public int getType() {
         return type;
     }
-    public void setType(int msgType){ this.type = msgType;}
+    public void setType(int mserverGUIType){ this.type = mserverGUIType;}
     public String getMessage() {
         return message;
     }
-    public void setMessage(String msg) {
-        message = msg;
+    public void setMessage(String mserverGUI) {
+        message = mserverGUI;
     }
     public void setReceivers(ArrayList<String> selectedUserlist){
         receivers = (ArrayList<String>)selectedUserlist.clone();

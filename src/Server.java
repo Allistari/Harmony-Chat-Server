@@ -3,63 +3,85 @@ import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+/**
+ * Server.java
+ * makes a server
+ * @author Angelina Zhang
+ * created 2018-12-11
+ * last modified 2018-12-15
+ */
+
 public class Server {
     private static int uniqueId;
-    private ArrayList<ClientThread> al;
-    private ServerGUI sg;
-    private SimpleDateFormat sdf;
+    private ArrayList<ClientThread> users;
+    private ServerInterface serverGUI;
+    private SimpleDateFormat dateAndTime;
     private int port;
-    private boolean keepGoing;
+    private boolean maintain;
     private ServerSocket serverSocket;
     private Hashtable<String, ChatClient> ccHashtable = new Hashtable<String, ChatClient>();
 
+    /**
+     * Server
+     * constructor
+     * @param port
+     */
     public Server(int port) {
         this(port, null);
     }
 
-    public Server(int port, ServerGUI sg) {
-        this.sg = sg;
+    /**
+     * Server
+     * constructor
+     * @param port
+     * @param serverGUI
+     */
+    public Server(int port, ServerInterface serverGUI) {
+        this.serverGUI = serverGUI;
         this.port = port;
-        sdf = new SimpleDateFormat("HH:mm:ss");
-        al = new ArrayList<ClientThread>();
+        dateAndTime = new SimpleDateFormat("HH:mm:ss");
+        users = new ArrayList<ClientThread>();
     }
 
+    /**
+     * start
+     * start running the server
+     */
     public void start() {
-        keepGoing = true;
-        String key;
+        maintain = true;
         try
         {
             serverSocket = new ServerSocket(port);
-            while(keepGoing)
+            while(maintain)
             {
                 display("Server waiting for Clients on port " + port + ".");
                 Socket socket = serverSocket.accept();  	// accept connection
-                if(!keepGoing)
+                if(!maintain)
                     break;
                 ClientThread t = new ClientThread(socket);  // make a thread of it
-                al.add(t);// save it in the ArrayList
-                if(sg !=null){
-                    ccHashtable = sg.getChatUserlist();
+                users.add(t);// save it in the ArrayList
+                if(serverGUI !=null){
+                    ccHashtable = serverGUI.getChatUserList();
                     ChatClient cc;
                     if (ccHashtable.get(t.username)==null){
-                        cc = new ChatClient(t.username,ChatClient.ONLINE,"");
+                        cc = new ChatClient(t.username,ChatClient.ONLINE);
                         ccHashtable.put(t.username,cc);
                     }else{
                         cc = ccHashtable.get(t.username);
                         cc.setStatus(ChatClient.ONLINE);
                         ccHashtable.put(t.username,cc);
                     }
-                    sg.refreshUserStatus(false);
+                    serverGUI.refreshUserStatus(false);
                 }
                 t.start();
             }
             try {
                 serverSocket.close();
-                for(int i = 0; i < al.size(); ++i) {
-                    ClientThread tc = al.get(i);
+                for(int i = 0; i < users.size(); ++i) {
+                    ClientThread tc = users.get(i);
                     try {
-                        tc.sInput.close();
-                        tc.sOutput.close();
+                        tc.listenInput.close();
+                        tc.listenOutput.close();
                         tc.socket.close();
                     }
                     catch(IOException ioE) {
@@ -71,20 +93,24 @@ public class Server {
             }
         }
         catch (IOException e) {
-            String msg = sdf.format(new Date()) + " Exception on new ServerSocket: " + e + "\n";
-            display(msg);
+            String mserverGUI = dateAndTime.format(new Date()) + " Exception on new ServerSocket: " + e + "\n";
+            display(mserverGUI);
         }
     }
 
+    /**
+     * stop
+     * stops the thread
+     */
     protected void stop() {
-        keepGoing = false;
+        maintain = false;
         try {
             serverSocket.close();
-            for(int i = 0; i < al.size(); ++i) {
-                ClientThread tc = al.get(i);
+            for(int i = 0; i < users.size(); ++i) {
+                ClientThread tc = users.get(i);
                 try {
-                    tc.sInput.close();
-                    tc.sOutput.close();
+                    tc.listenInput.close();
+                    tc.listenOutput.close();
                     tc.socket.close();
                 }
                 catch(IOException ioE) {
@@ -102,57 +128,73 @@ public class Server {
         }
     }
 
-    private void display(String msg) {
-        String time = sdf.format(new Date()) + " " + msg;
-        if(sg == null)
+    /**
+     * display
+     * display event log with time
+     * @param mserverGUI
+     */
+    private void display(String mserverGUI) {
+        String time = dateAndTime.format(new Date()) + " " + mserverGUI;
+        if(serverGUI == null)
             System.out.println(time);
         else
-            sg.appendEvent(time + "\n");
+            serverGUI.appendEvent(time + "\n");
     }
+
+    /**
+     * broadcast
+     * shows message to all users
+     * @param message
+     */
     private synchronized void broadcast(String message) {
-        String time = sdf.format(new Date());
+        String time = dateAndTime.format(new Date());
         String messageLf = time + " " + message + "\n";
         ChatMessage sm;
         try {
-            if (sg == null)
+            if (serverGUI == null)
                 System.out.print(messageLf);
             else
-                sg.appendRoom(messageLf);
-            for (int i = al.size(); --i >= 0; ) {
-                ClientThread ct = al.get(i);
+                serverGUI.appendRoom(messageLf);
+            for (int i = users.size(); --i >= 0; ) {
+                ClientThread ct = users.get(i);
                 sm = new ChatMessage(ChatMessage.MESSAGE, messageLf);
-                if (!ct.writeMsgObj(sm)) {
-                    al.remove(i);
+                if (!ct.writeMserverGUIObj(sm)) {
+                    users.remove(i);
                     display("Disconnected Client " + ct.username + " removed from list.");
                 }
             }
         }catch(Exception e)
         {
             System.out.println(e.getMessage());
-            sg.appendEvent("Exception:" + e.getMessage());
+            serverGUI.appendEvent("Exception:" + e.getMessage());
         }
     }
 
+    /**
+     * privateChat
+     * only shows message to selected users
+     * @param cm
+     */
     private void privateChat(ChatMessage cm)
     {
         if (cm==null){return;}
         String chatusername ;
-        String time = sdf.format(new Date());
+        String time = dateAndTime.format(new Date());
         String messageLf = time + " " + cm.getMessage() + "\n";
         ChatMessage sm;
         try {
-            if (sg == null)
+            if (serverGUI == null)
                 System.out.print(messageLf);
             else
-                sg.appendPrivateChat(messageLf);     // append in the room window
+                serverGUI.appendPrivateChat(messageLf);     // append in the room window
             if (cm.getReceivers().size() > 0) {
                 chatusername = cm.getReceivers().get(0);
-                for (int i = al.size(); --i >= 0; ) {
-                    ClientThread ct = al.get(i);
+                for (int i = users.size(); --i >= 0; ) {
+                    ClientThread ct = users.get(i);
                     if (chatusername.equals(ct.username)) {
                         sm = new ChatMessage(ChatMessage.MESSAGE, messageLf);
-                        if (!ct.writeMsgObj(sm)) {
-                            al.remove(i);
+                        if (!ct.writeMserverGUIObj(sm)) {
+                            users.remove(i);
                             display("Disconnected Client " + ct.username + ".");
                         }
                         break;
@@ -162,20 +204,30 @@ public class Server {
         }catch (Exception e)
         {
             System.out.println(e.getMessage());
-            sg.appendEvent("exception:" + e.getMessage());
+            serverGUI.appendEvent("exception:" + e.getMessage());
         }
     }
+
+    /**
+     * remove
+     * log out of the server
+     * @param id
+     */
     synchronized void remove(int id) {
-        for(int i = 0; i < al.size(); ++i) {
-            ClientThread ct = al.get(i);
+        for(int i = 0; i < users.size(); ++i) {
+            ClientThread ct = users.get(i);
             // found it
             if(ct.id == id) {
-                al.remove(i);
+                users.remove(i);
                 return;
             }
         }
     }
 
+    /**
+     * Main
+     * @param args
+     */
     public static void main(String[] args) {
         int portNumber = 1500;
         switch(args.length) {
@@ -199,12 +251,15 @@ public class Server {
         server.start();
     }
 
-    /** One instance of this thread will run for each client */
+    /**
+     * ClientThread
+     * makes a new thread for every client
+     */
     class ClientThread extends Thread {
         // the socket where to listen/talk
         Socket socket;
-        ObjectInputStream sInput;
-        ObjectOutputStream sOutput;
+        ObjectInputStream listenInput;
+        ObjectOutputStream listenOutput;
         int id;
         String username;
         ChatMessage cm;
@@ -213,16 +268,16 @@ public class Server {
         ClientThread(Socket socket) {
             id = ++uniqueId;
             this.socket = socket;
-            System.out.println("Thread trying to create Object Input/Output Streams");
+            System.out.println("Attempting Input/Output Streams");
             try
             {
-                sOutput = new ObjectOutputStream(socket.getOutputStream());
-                sInput  = new ObjectInputStream(socket.getInputStream());
-                username = (String) sInput.readObject();
+                listenOutput = new ObjectOutputStream(socket.getOutputStream());
+                listenInput  = new ObjectInputStream(socket.getInputStream());
+                username = (String) listenInput.readObject();
                 display(username + " just connected.");
             }
             catch (IOException e) {
-                display("Exception creating new Input/output Streams: " + e);
+                display("Exception during attempt: Input/output Streams: " + e);
                 return;
             }
             catch (ClassNotFoundException e) {
@@ -230,13 +285,17 @@ public class Server {
             date = new Date().toString() + "\n";
         }
 
+        /**
+         * run
+         * keep running
+         */
         public void run() {
-            boolean keepGoing = true;
-            while(keepGoing) {
+            boolean maintain = true;
+            while(maintain) {
 
                 //Error here
                 try {
-                    cm = (ChatMessage) sInput.readObject();
+                    cm = (ChatMessage) listenInput.readObject();
                 }
                 catch (IOException e) {
                     display(username + " Exception reading Streams: " + e);
@@ -251,19 +310,26 @@ public class Server {
                     case ChatMessage.MESSAGE:
                         broadcast(username + ": " + message);
                         break;
-                    case ChatMessage.PRIVATEMSG:
+                    case ChatMessage.PRIVATEMserverGUI:
                         cm.setMessage(username + ": " +message );
                         privateChat(cm);
                         break;
                     case ChatMessage.LOGOUT:
-                        display(username + " disconnected with a LOGOUT message.");
-                        if (sg !=null){
-                            sg.refreshUserStatus(true);
+                        display(username + " disconnected from the server.");
+                        writeMserverGUIObj(new ChatMessage(1, username+" has logged out of the server."));
+                        if (serverGUI !=null){
+                            serverGUI.refreshUserStatus(true);
                         }
-                        keepGoing = false;
+                        maintain = false;
                         break;
                     case ChatMessage.USERLIST:
                         // scan al the users connected
+                        writeMserverGUIObj(new ChatMessage(1,"Current users connected at " + dateAndTime.format(new Date()) + "\n"));
+                        for(int i = 0; i < users.size(); ++i) {
+                            ClientThread ct = users.get(i);
+                            writeMserverGUIObj(new ChatMessage(1, (i+1) + ") " + ct.username + " live since " + ct.date));
+                        }
+
                         Enumeration names;
                         String key;
                         try{
@@ -274,8 +340,8 @@ public class Server {
                                     key = (String) names.nextElement();
                                     ChatClient cc;
                                     cc = ccHashtable.get(key);
-                                    sm = new ChatMessage(ChatMessage.USERNAME,cc.getUsername() + ";" + cc.getStatus());
-                                    writeMsgObj(sm);
+                                    sm = new ChatMessage(ChatMessage.USERNAME,cc.getUsername() + " : " + cc.getStatus());
+                                    writeMserverGUIObj(sm);
                                 }
                             }
                         }catch(Exception e)
@@ -291,13 +357,17 @@ public class Server {
         }
 
 
+        /**
+         * close
+         * close all streams
+         */
         private void close() {
             try {
-                if(sOutput != null) sOutput.close();
+                if(listenOutput != null) listenOutput.close();
             }
             catch(Exception e) {}
             try {
-                if(sInput != null) sInput.close();
+                if(listenInput != null) listenInput.close();
             }
             catch(Exception e) {};
             try {
@@ -305,18 +375,20 @@ public class Server {
             }
             catch (Exception e) {}
         }
-
-        /*
-         * Write a String to the Client output stream
+        /**
+         * writeMserverGUIObj
+         * writes a string to the client output stream
+         * @param mserverGUI
+         * @return
          */
-        private boolean writeMsgObj(ChatMessage msg) {
+        private boolean writeMserverGUIObj(ChatMessage mserverGUI) {
             if(!socket.isConnected()) {
                 close();
                 return false;
             }
             try {
 
-                sOutput.writeObject(msg);
+                listenOutput.writeObject(mserverGUI);
             }
             catch(IOException e) {
                 display("Error sending message to " + username);
